@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Camera Viewer</title>
+  <script src="https://unpkg.com/roslib/build/roslib.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 30px; }
+    button { font-size: 18px; margin: 10px; padding: 10px 20px; }
+    #cameraFeed { margin-top: 20px; border: 1px solid #ccc; width: 640px; height: auto; }
+    #status { font-size: 16px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>카메라 실시간 스트리밍</h1>
+  <button id="toggleButton" onclick="toggleStream()">열기</button>
+  <div><img id="cameraFeed" src="" alt="카메라 영상" /></div>
+  <div id="status"></div> <!-- 상태 메시지 표시 영역 -->
+
+  <script>
+    // ROS 객체 생성
+    let ros = new ROSLIB.Ros({
+      url: 'ws://localhost:9090' // rosbridge가 실행 중이어야 함
+    });
+
+    let listener = null;
+    let isStreaming = false;
+    let lastReceivedTime = 0;  // 마지막으로 수신된 시간 (타임스탬프)
+
+    // Stream 연결 상태에 따른 상태 메시지 업데이트
+    function updateStatus(message) {
+      document.getElementById('status').innerText = message;
+    }
+
+    function toggleStream() {
+      if (isStreaming) {
+        stopStream();
+      } else {
+        startStream();
+      }
+    }
+
+    function startStream() {
+      if (listener) return; // 중복 연결 방지
+
+      // 연결 상태 업데이트
+      updateStatus('카메라 스트리밍 시작 중...');
+      document.getElementById('toggleButton').innerText = '닫기'; // 버튼 텍스트 변경
+
+      listener = new ROSLIB.Topic({
+        ros: ros,
+        name: '/camera/color/image_raw/compressed',
+        messageType: 'sensor_msgs/CompressedImage'
+      });
+
+      listener.subscribe(function (message) {
+        console.log('Received image data:', message.data); // 데이터 확인
+
+        // 타임스탬프가 더 최신일 때만 화면에 출력
+        const currentTime = message.header.stamp.secs + message.header.stamp.nsecs / 1e9;  // 초 단위로 변환
+        if (currentTime > lastReceivedTime) {
+          lastReceivedTime = currentTime;
+          document.getElementById('cameraFeed').src = 'data:image/jpeg;base64,' + message.data;
+        } else {
+          console.log('Dropped outdated frame'); // 지연된 프레임은 출력하지 않음
+        }
+      });
+
+      isStreaming = true;
+      updateStatus('스트리밍 중...');
+    }
+
+    function stopStream() {
+      if (listener) {
+        listener.unsubscribe();
+        listener = null;
+        document.getElementById('cameraFeed').src = ''; // 이미지 제거
+
+        // 연결 상태 업데이트
+        isStreaming = false;
+        updateStatus('스트리밍 종료');
+        document.getElementById('toggleButton').innerText = '열기'; // 버튼 텍스트 변경
+      }
+    }
+  </script>
+</body>
+</html>
