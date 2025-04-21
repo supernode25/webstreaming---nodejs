@@ -57,3 +57,10 @@ function stopStream() {
     document.getElementById('cameraFeed').src = ''; // 이미지 제거
   }
 }
+
+🎯 결과
+이전 프레임은 제거되고,
+→ 최신 영상만 출력됨
+
+네트워크가 불안정해도
+→ 실시간과 유사한 영상 품질 유지
