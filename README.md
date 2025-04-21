@@ -57,6 +57,7 @@ function stopStream() {
     document.getElementById('cameraFeed').src = ''; // 이미지 제거
   }
 }
+```
 
 🎯 결과
 이전 프레임은 제거되고,
